@@ -1,17 +1,19 @@
 const Product = require("../models/productModel");
+const ErrorHandler = require("../utils/errorHandler");
+const catchAsync = require("../middleware/catchAsyncErrors");
 
 // Create product -- Admin
-exports.createProduct = async (req, res, next) => {
+exports.createProduct = catchAsync(async (req, res, next) => {
   const product = await Product.create(req.body);
 
   res.status(200).json({
     success: true,
     product,
   });
-};
+});
 
 //Get all products
-exports.getAllProducts = async (req, res, next) => {
+exports.getAllProducts = catchAsync(async (req, res, next) => {
   const products = await Product.find();
 
   res.status(200).json({
@@ -19,17 +21,14 @@ exports.getAllProducts = async (req, res, next) => {
     count: products.length,
     products,
   });
-};
+});
 
 // Update Product -- Admin
-exports.updateProduct = async (req, res, next) => {
+exports.updateProduct = catchAsync(async (req, res, next) => {
   let product = await Product.findById(req.params.id);
 
   if (!product) {
-    return res.status(500).json({
-      success: false,
-      message: "Product not found",
-    });
+    return next(new ErrorHandler("Product Not found", 404));
   }
 
   product = await Product.findByIdAndUpdate(req.params.id, req.body, {
@@ -43,17 +42,14 @@ exports.updateProduct = async (req, res, next) => {
     count: product.length,
     product,
   });
-};
+});
 
 // Delete Product -- Admin
-exports.deleteProduct = async (req, res, next) => {
+exports.deleteProduct = catchAsync(async (req, res, next) => {
   const product = await Product.findById(req.params.id);
 
   if (!product) {
-    return res.status(500).json({
-      success: false,
-      message: "Product not found",
-    });
+    return next(new ErrorHandler("Product Not found", 404));
   }
 
   await Product.findByIdAndDelete(req.params.id);
@@ -62,21 +58,18 @@ exports.deleteProduct = async (req, res, next) => {
     success: true,
     message: "Product deleted successfully!",
   });
-};
+});
 
 //Get single product details
-exports.getProductDetails = async (req, res, next) => {
+exports.getProductDetails = catchAsync(async (req, res, next) => {
   const product = await Product.findById(req.params.id);
 
   if (!product) {
-    return res.status(500).json({
-      success: false,
-      message: "Product not found",
-    });
+    return next(new ErrorHandler("Product Not found", 404));
   }
 
   res.status(200).json({
     success: true,
     product,
   });
-};
+});
