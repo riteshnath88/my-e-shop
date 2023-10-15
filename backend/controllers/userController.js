@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const ErrorHandler = require("../utils/errorHandler");
 const catchAsync = require("../middleware/catchAsyncErrors");
 const User = require("../models/userModel");
@@ -38,7 +39,7 @@ exports.loginUser = catchAsync(async (req, res, next) => {
   }
 
   // To check if the password is correct - comparePassword() method is available in model
-  const isPasswordMatched = user.comparePassword(password);
+  const isPasswordMatched = await user.comparePassword(password);
 
   if (!isPasswordMatched) {
     return next(new ErrorHandler("Invalid email or password", 401));
@@ -81,7 +82,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
   try {
     await sendEmail({
       email: user.email,
-      subject: `my-e-shop password recovery`,
+      subject: `my-e-shop password recovery (Link valid for 15 minutes)`,
       message,
     });
 
@@ -95,4 +96,33 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
     return next(new ErrorHandler(error.message, 500));
   }
+});
+
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  // Creating token hash
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(
+      new ErrorHandler("Reset password token is invalid or has expired", 400)
+    );
+  }
+
+  if (req.body.password !== req.body.confirmPassword) {
+    return next(new ErrorHandler("Passwords doesnot match", 400));
+  }
+
+  user.password = req.body.password;
+  user.resetPassword = undefined;
+  user.resetPasswordExpire = undefined;
+
+  await user.save(sendToken(user, 200, res));
 });

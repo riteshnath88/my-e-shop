@@ -9,8 +9,6 @@ module.exports = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.message = err.message || "Internal Server Error";
 
-  console.log(process.env.PROCESS_ENV);
-
   // Wrong mongodb id error - if the id is not in the format, mongodb will give error
   // Cast to object failed
   if (err.name === "CastError") {
