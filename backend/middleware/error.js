@@ -16,6 +16,24 @@ module.exports = (err, req, res, next) => {
     err = new ErrorHandler(message, 400);
   }
 
+  // Mongoose duplicate key error
+  if (err.code === 11000) {
+    const message = `Duplicate ${Object.keys(err.keyValue)} entered.`;
+    err = new ErrorHandler(message, 400);
+  }
+
+  // JSON web token error
+  if (err.name === "JSONWebTokenError") {
+    const message = `JSON web token is invalid, try again.`;
+    err = new ErrorHandler(message, 400);
+  }
+
+  // JWT expire error
+  if (err.name === "TokenExpireError") {
+    const message = `JSON web token is expired. Try again with a new token.`;
+    err = new ErrorHandler(message, 400);
+  }
+
   if (process.env.PROCESS_ENV == "development") {
     res.status(err.statusCode).json({
       success: false,
