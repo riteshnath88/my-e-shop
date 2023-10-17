@@ -82,3 +82,52 @@ exports.getProductDetails = catchAsync(async (req, res, next) => {
     product,
   });
 });
+
+// Create new review or update the review
+exports.createProductReview = catchAsync(async (req, res, next) => {
+  const { rating, comment, productId } = req.body;
+
+  const review = {
+    user: req.user._id,
+    name: req.user.name,
+    rating: Number(rating),
+    comment,
+  };
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    return next(new ErrorHandler("Product not found", 401));
+  }
+
+  // Checking if the same user has already reviewed the product - from the product, finding the review
+  // followed by user of the review and converign it to string (only user id) and then matching with the
+  // id of logged in user
+  const isReviewed = product.reviews.find(
+    (rev) => rev.user.toString() === req.user._id.toString()
+  );
+
+  if (isReviewed) {
+    product.reviews.forEach((rev) => {
+      if (rev.user.toString() === req.user._id.toString()) {
+        rev.rating = rating;
+        rev.comment = comment;
+      }
+    });
+  } else {
+    product.reviews.push(review);
+    product.noOfReviews = product.reviews.length;
+  }
+
+  // Finding the total average rating for ratings field
+  let avg = 0;
+  product.reviews.forEach((rev) => {
+    avg += rev.rating;
+  });
+  product.ratings = (avg / product.reviews.length).toFixed(2);
+
+  await product.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    success: true,
+  });
+});

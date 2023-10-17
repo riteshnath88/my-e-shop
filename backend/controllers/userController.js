@@ -5,6 +5,7 @@ const User = require("../models/userModel");
 const sendToken = require("../utils/jwtToken");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const sendEmail = require("../utils/sendEmail.js");
+const userModel = require("../models/userModel");
 
 // Register a user
 exports.registerUser = catchAsync(async (req, res, next) => {
@@ -152,8 +153,95 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   user.password = req.body.newPassword;
   await user.save();
 
+  sendToken(user, 200, res);
+});
+
+// Update user profile
+exports.updateProfile = catchAsync(async (req, res, next) => {
+  const newUserData = {
+    name: req.body.name,
+    email: req.body.email,
+  };
+
+  // We will add cloudinary latter
+  const user = await User.findByIdAndUpdate(req.user.id, newUserData, {
+    new: true,
+    runValidators: true,
+    useFindAndModify: false,
+  });
+
   res.status(200).json({
     success: true,
     user,
+  });
+});
+
+//Get all users (admin)
+exports.getAllUsers = catchAsync(async (req, res, next) => {
+  const users = await User.find();
+
+  res.status(200).json({
+    success: true,
+    result: users.length,
+    users,
+  });
+});
+
+//Get user details (admin)
+exports.getUser = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    return next(
+      new ErrorHandler(`User does not exist with Id: ${req.params.id}`, 400)
+    );
+  }
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
+// Update user role
+exports.updateUserRole = catchAsync(async (req, res, next) => {
+  const newUserData = {
+    name: req.body.name,
+    email: req.body.email,
+    role: req.body.role,
+  };
+
+  const user = await User.findByIdAndUpdate(req.params.id, newUserData, {
+    new: true,
+    runValidators: true,
+    useFindAndModify: false,
+  });
+
+  if (!user) {
+    return next(new ErrorHandler("User not found", 400));
+  }
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
+// Delete User -- Admin
+exports.deleteUser = catchAsync(async (req, res, next) => {
+  const user = await userModel.findById(req.params.id);
+  // We will remove cloudinary latter
+
+  if (!user) {
+    return next(
+      new ErrorHandler(`User does not exist with id: ${req.params.id}`)
+    );
+  }
+
+  await user.remove();
+
+  res.status(200).json({
+    success: true,
+    message: "User deleted successfully",
   });
 });
